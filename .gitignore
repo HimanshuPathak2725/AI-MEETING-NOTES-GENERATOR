@@ -17,7 +17,7 @@ env/
 *.log
 
 # Data/Model artifacts
-data/
+/data/
 datasets/
 models/
 artifacts/

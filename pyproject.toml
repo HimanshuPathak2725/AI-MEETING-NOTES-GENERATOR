@@ -1,0 +1,21 @@
+[project]
+name = "meeting-notes-generator"
+version = "1.0.0"
+description = "Multilingual Meeting Notes Generator using AssemblyAI and OpenAI"
+requires-python = ">=3.10"
+dependencies = [
+    "assemblyai>=0.37.0",
+    "openai>=1.0.0",
+    "python-dotenv>=0.19.0",
+    "streamlit>=1.30.0",
+]
+
+[tool.pyrefly]
+project-includes = [
+    "**/*.py*",
+    "**/*.ipynb",
+]
+search-path = [
+    "."
+]
+

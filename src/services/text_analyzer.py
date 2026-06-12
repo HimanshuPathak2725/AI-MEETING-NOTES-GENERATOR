@@ -62,7 +62,10 @@ class TextAnalyzer:
                 temperature=0.1
             )
             
-            response_text = response.choices[0].message.content.strip()
+            content = response.choices[0].message.content
+            if content is None:
+                raise ValueError("Empty response from OpenAI")
+            response_text = content.strip()
             
             # Clean markdown code blocks
             if response_text.startswith('```json'):
@@ -151,7 +154,10 @@ class TextAnalyzer:
                 temperature=0.2
             )
             
-            response_text = response.choices[0].message.content.strip()
+            content = response.choices[0].message.content
+            if content is None:
+                raise ValueError("Empty response from OpenAI")
+            response_text = content.strip()
             
             # Clean markdown code blocks
             if response_text.startswith('```json'):
@@ -235,7 +241,10 @@ class TextAnalyzer:
                 temperature=0.1
             )
             
-            response_text = response.choices[0].message.content.strip()
+            content = response.choices[0].message.content
+            if content is None:
+                raise ValueError("Empty response from OpenAI")
+            response_text = content.strip()
             
             # Clean markdown code blocks
             if response_text.startswith('```json'):
@@ -305,7 +314,10 @@ class TextAnalyzer:
                 temperature=0.3
             )
             
-            title = response.choices[0].message.content.strip()
+            content = response.choices[0].message.content
+            if content is None:
+                raise ValueError("Empty response from OpenAI")
+            title = content.strip()
             # Clean up any quotes or extra formatting
             title = title.strip('"\'')
             return title

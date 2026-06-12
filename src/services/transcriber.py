@@ -44,7 +44,9 @@ class AudioTranscriber:
             
             time.sleep(2)
             wait_time += 2
-            transcript = self.client.get_transcript(transcript.id)
+            if not transcript.id:
+                raise Exception("Transcript ID is missing")
+            transcript = aai.Transcript.get_by_id(transcript.id)
         
         if transcript.status == aai.TranscriptStatus.error:
             error_msg = f"Transcription failed: {transcript.error}"
@@ -77,7 +79,7 @@ class AudioTranscriber:
         """Get duration from the last transcript if available."""
         if hasattr(self, '_last_transcript') and self._last_transcript:
             # Try to get duration from transcript object
-            if hasattr(self._last_transcript, 'audio_duration'):
+            if hasattr(self._last_transcript, 'audio_duration') and self._last_transcript.audio_duration is not None:
                 return int(self._last_transcript.audio_duration)
             elif hasattr(self._last_transcript, 'json_response') and self._last_transcript.json_response:
                 return int(self._last_transcript.json_response.get("audio_duration", 0))

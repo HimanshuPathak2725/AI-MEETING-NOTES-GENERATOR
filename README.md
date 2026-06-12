@@ -14,7 +14,7 @@ We use:
 
 - [AssemblyAI Universal](https://www.assemblyai.com/blog/99-languages) for language detection and transcription
 - Any multilingual LLM of your choice
-- [Streamlit]([https://streamlit.io/](https://ai-meeting-notes-generator-2005.streamlit.app/)) for the user interface
+- [Streamlit](https://ai-meeting-notes-generator-2005.streamlit.app/) for the user interface
 
 ## Set Up
 

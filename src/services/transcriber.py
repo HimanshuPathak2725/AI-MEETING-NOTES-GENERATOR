@@ -34,20 +34,6 @@ class AudioTranscriber:
         
         transcript = self.client.transcribe(audio_path, config=config)
         
-        # Wait for completion
-        max_wait_time = 300
-        wait_time = 0
-        
-        while transcript.status not in [aai.TranscriptStatus.completed, aai.TranscriptStatus.error]:
-            if wait_time >= max_wait_time:
-                raise Exception("Transcription timeout")
-            
-            time.sleep(2)
-            wait_time += 2
-            if not transcript.id:
-                raise Exception("Transcript ID is missing")
-            transcript = aai.Transcript.get_by_id(transcript.id)
-        
         if transcript.status == aai.TranscriptStatus.error:
             error_msg = f"Transcription failed: {transcript.error}"
             

@@ -16,7 +16,7 @@ class TextAnalyzer:
     
     def generate_meeting_summary(self, transcript_text: str) -> str:
         """Generate a comprehensive summary of the meeting in bullet point format."""
-        truncated_text = transcript_text[:3000]
+        truncated_text = transcript_text[:100000]
         
         prompt = f"""
         Analyze this meeting transcript and provide a structured summary in English.
@@ -108,7 +108,7 @@ class TextAnalyzer:
     
     def extract_action_items(self, transcript_text: str) -> List[ActionItem]:
         """Extract action items and tasks from the meeting transcript."""
-        truncated_text = transcript_text[:2000]
+        truncated_text = transcript_text[:100000]
         
         prompt = f"""
         Extract all action items, tasks, and commitments from this meeting transcript.
@@ -189,7 +189,7 @@ class TextAnalyzer:
         if not speakers:
             return []
         
-        truncated_text = transcript_text[:1500]
+        truncated_text = transcript_text[:100000]
         
         prompt = f"""
         You are an expert meeting analyst. Analyze this transcript to identify who each speaker is by their real names.
@@ -290,7 +290,7 @@ class TextAnalyzer:
     
     def generate_meeting_title(self, transcript_text: str) -> str:
         """Generate a descriptive title for the meeting based on content."""
-        truncated_text = transcript_text[:1000]  # Use first part for title generation
+        truncated_text = transcript_text[:10000]  # Use first part for title generation
         
         prompt = f"""
         Generate a concise, descriptive title for this meeting based on its content.

@@ -1,9 +1,10 @@
-"""Multilingual Meeting Notes Generator — Streamlit Application."""
-
 import os
 import sys
 import tempfile
 import time
+import json
+import re
+import glob
 from datetime import datetime
 
 import streamlit as st
@@ -17,14 +18,42 @@ from src.services.audio_processor import MeetingProcessor
 # pyrefly: ignore [missing-import]
 from src.data.data_models import MeetingResult
 
+HISTORY_DIR = ".history"
+os.makedirs(HISTORY_DIR, exist_ok=True)
 
-# ──────────────────────────────────────────────────────────────
-# 0. Environment & page config
-# ──────────────────────────────────────────────────────────────
+def list_history_files():
+    files = glob.glob(os.path.join(HISTORY_DIR, "*.json"))
+    files.sort(reverse=True)
+    return files
+
+def load_selected_history():
+    selected = st.session_state.selected_history_dropdown
+    if selected != "-- Select past meeting --":
+        history_files = list_history_files()
+        for path in history_files:
+            filename = os.path.basename(path)
+            match = re.match(r"^(\d{8})_(\d{6})_(.*)\.json$", filename)
+            if match:
+                date_str = match.group(1)
+                time_str = match.group(2)
+                title_part = match.group(3).replace("_", " ").title()
+                display_name = f"📅 {date_str[:4]}-{date_str[4:6]}-{date_str[6:]} {time_str[:2]}:{time_str[2:4]} - {title_part}"
+            else:
+                display_name = filename
+            if display_name == selected:
+                try:
+                    with open(path, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    st.session_state["result"] = MeetingResult.from_dict(data)
+                except Exception as exc:
+                    st.sidebar.error(f"Failed to load history: {exc}")
+                break
+
 load_dotenv()
-
-ASSEMBLYAI_API_KEY = os.getenv("ASSEMBLY_AI_API_KEY", "")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+env_aai_key = os.getenv("ASSEMBLY_AI_API_KEY", "")
+env_openai_key = os.getenv("OPENAI_API_KEY", "")
+ASSEMBLYAI_API_KEY = ""
+OPENAI_API_KEY = ""
 
 st.set_page_config(
     page_title="AI Meeting Notes Generator",
@@ -352,15 +381,69 @@ with st.sidebar:
     st.markdown("### ⚙️ Configuration")
     st.markdown("---")
 
-    if not ASSEMBLYAI_API_KEY:
-        st.warning("⚠️ ASSEMBLY_AI_API_KEY missing in `.env`")
+    if env_aai_key:
+        st.success("✅ AssemblyAI key loaded from environment")
+        ASSEMBLYAI_API_KEY = env_aai_key
     else:
-        st.success("✅ AssemblyAI key loaded")
+        ASSEMBLYAI_API_KEY = st.text_input(
+            "AssemblyAI API Key",
+            type="password",
+            placeholder="Enter AssemblyAI Key...",
+            value=st.session_state.get("aai_key", "")
+        )
+        st.session_state["aai_key"] = ASSEMBLYAI_API_KEY
 
-    if not OPENAI_API_KEY:
-        st.warning("⚠️ OPENAI_API_KEY missing in `.env`")
+    if env_openai_key:
+        st.success("✅ OpenAI key loaded from environment")
+        OPENAI_API_KEY = env_openai_key
     else:
-        st.success("✅ OpenAI key loaded")
+        OPENAI_API_KEY = st.text_input(
+            "OpenAI API Key",
+            type="password",
+            placeholder="Enter OpenAI Key...",
+            value=st.session_state.get("openai_key", "")
+        )
+        st.session_state["openai_key"] = OPENAI_API_KEY
+
+    st.markdown("---")
+    st.markdown("### 📜 Meeting History")
+    
+    history_files = list_history_files()
+    history_options = ["-- Select past meeting --"]
+    
+    file_map = {}
+    for path in history_files:
+        filename = os.path.basename(path)
+        match = re.match(r"^(\d{8})_(\d{6})_(.*)\.json$", filename)
+        if match:
+            date_str = match.group(1)
+            time_str = match.group(2)
+            title_part = match.group(3).replace("_", " ").title()
+            display_name = f"📅 {date_str[:4]}-{date_str[4:6]}-{date_str[6:]} {time_str[:2]}:{time_str[2:4]} - {title_part}"
+        else:
+            display_name = filename
+        history_options.append(display_name)
+        file_map[display_name] = path
+        
+    selected_history = st.selectbox(
+        "Load Previous Analysis",
+        options=history_options,
+        index=0,
+        key="selected_history_dropdown",
+        on_change=load_selected_history
+    )
+    
+    if len(history_files) > 0:
+        if st.button("🗑️ Clear History", use_container_width=True):
+            for f in glob.glob(os.path.join(HISTORY_DIR, "*")):
+                try:
+                    if os.path.isfile(f):
+                        os.unlink(f)
+                except Exception as exc:
+                    pass
+            st.session_state.pop("result", None)
+            st.session_state["selected_history_dropdown"] = "-- Select past meeting --"
+            st.rerun()
 
     st.markdown("---")
     st.markdown(
@@ -409,10 +492,10 @@ if start_btn:
         st.error("📂 Please upload an audio file first.")
         st.stop()
     if not ASSEMBLYAI_API_KEY:
-        st.error("🔑 AssemblyAI API key is missing. Add it to your `.env` file.")
+        st.error("🔑 AssemblyAI API key is missing. Add it to your `.env` file or the sidebar.")
         st.stop()
     if not OPENAI_API_KEY:
-        st.error("🔑 OpenAI API key is missing. Add it to your `.env` file.")
+        st.error("🔑 OpenAI API key is missing. Add it to your `.env` file or the sidebar.")
         st.stop()
 
     # ── Save uploaded file to temp dir ──
@@ -447,6 +530,28 @@ if start_btn:
         progress.empty()
 
         st.session_state["result"] = result
+
+        # ── Save result to local history ──
+        try:
+            def slugify(s: str) -> str:
+                s = s.lower().strip()
+                s = re.sub(r'[^\w\s-]', '', s)
+                s = re.sub(r'[\s_-]+', '_', s)
+                return s
+            
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            safe_title = slugify(result.title)
+            filename = f"{timestamp}_{safe_title}.json"
+            filepath = os.path.join(HISTORY_DIR, filename)
+            
+            with open(filepath, "w", encoding="utf-8") as f:
+                json.dump(result.to_dict(), f, indent=2, ensure_ascii=False)
+            
+            # Reset history selectbox selection
+            if "selected_history_dropdown" in st.session_state:
+                st.session_state.selected_history_dropdown = "-- Select past meeting --"
+        except Exception as e:
+            print(f"Warning: Failed to save meeting to history: {e}")
 
     except Exception as exc:
         st.error(f"❌ Processing failed: {exc}")
